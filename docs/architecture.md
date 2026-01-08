@@ -4,27 +4,33 @@
 flowchart TD
     Entry[CLI Entry Point\npython -m snake] --> Run[run()]
     Run -->|TTY check| Wrapper[curses.wrapper]
-    Wrapper --> MainLoop[_main_loop]
+    Wrapper --> MainLoop[terminal.game:_main_loop]
 
-    MainLoop --> Menu[Menu Loop\nmenu_loop]
-    MainLoop --> Scores[High Scores\nrender_scores]
-    MainLoop --> GameLoop[_game_loop]
+    AndroidEntry[Android Entry Point\nsrc/main.py] --> App[SnakeApp (Kivy)]
+    App --> Screens[android.app\nMenu/Game/Scores]
 
-    GameLoop --> Input[Input Handling\nnext_direction]
-    GameLoop --> State[Game State\nmake_initial_snake + place_food]
+    MainLoop --> Menu[terminal.menu]
+    MainLoop --> Scores[terminal.scores]
+    MainLoop --> GameLoop[terminal.game:_game_loop]
+
+    GameLoop --> Input[terminal.input]
+    GameLoop --> State[core.new_game + step]
     GameLoop --> Timing[Timing & Speed\nmonotonic + sleep]
-    GameLoop --> Render[Rendering\nrender + render_center_message]
-    GameLoop --> Background[Starfield\ninit/update/render]
+    GameLoop --> Render[terminal.rendering]
+    GameLoop --> Background[terminal.background]
+
+    Screens --> AndroidGame[GameScreen tick\ncore.new_game + step]
+    Screens --> AndroidScores[scores_store]
 
     Render --> Border[draw_border]
     Render --> Screen[curses stdscr\naddch/addstr/refresh]
     Render --> Palette[Style\ninit_style + sprites]
-    Scores --> Storage[Persistence\nload/save/record]
-    Scores --> Prompt[Initials\nprompt_initials]
+    Scores --> Storage[scores_store]
+    Scores --> Prompt[prompt_initials]
 
     Background --> Stars[background.py]
     Input --> Keys[input.py]
-    State --> Food[place_food]
+    State --> Food[state.place_food]
     State --> Collision[Collision Rules\nWalls + Self]
 ```
 

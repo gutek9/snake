@@ -1,7 +1,8 @@
 import curses
 
-from snake import input as input_mod
-from snake import rendering, state, terminal
+from snake import state
+from snake.terminal import input as input_mod
+from snake.terminal import rendering, terminal
 
 
 class DummyStdScr:

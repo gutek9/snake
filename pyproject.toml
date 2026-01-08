@@ -11,8 +11,11 @@ requires-python = ">=3.8"
 license = { text = "MIT" }
 authors = [{ name = "Your Name" }]
 
+[project.optional-dependencies]
+android = ["kivy>=2.2.0"]
+
 [project.scripts]
-terminal-snake = "snake.game:run"
+terminal-snake = "snake.terminal.game:run"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
