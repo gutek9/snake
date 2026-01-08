@@ -85,20 +85,21 @@ def test_safe_addstr_ignores_curses_error():
 def test_draw_border_marks_edges(monkeypatch):
     calls = []
 
-    def fake_addch(stdscr, y, x, ch):
+    def fake_addch(stdscr, y, x, ch, *args, **kwargs):
         calls.append((y, x, ch))
 
     monkeypatch.setattr(rendering, "safe_addch", fake_addch)
 
     rendering.draw_border(object(), 4, 6)
 
+    sprites = rendering.get_sprites()
     expected = {
-        (0, 0, "#"),
-        (0, 5, "#"),
-        (3, 0, "#"),
-        (3, 5, "#"),
-        (2, 0, "#"),
-        (2, 5, "#"),
+        (0, 0, sprites["ul"]),
+        (0, 5, sprites["ur"]),
+        (3, 0, sprites["ll"]),
+        (3, 5, sprites["lr"]),
+        (0, 2, sprites["hline"]),
+        (2, 0, sprites["vline"]),
     }
     assert expected.issubset(set(calls))
 
@@ -109,10 +110,10 @@ def test_render_draws_snake_food_and_score(monkeypatch):
     addstr_calls = []
     border_calls = []
 
-    def fake_addch(stdscr_arg, y, x, ch):
+    def fake_addch(stdscr_arg, y, x, ch, *args, **kwargs):
         addch_calls.append((y, x, ch))
 
-    def fake_addstr(stdscr_arg, y, x, text):
+    def fake_addstr(stdscr_arg, y, x, text, *args, **kwargs):
         addstr_calls.append((y, x, text))
 
     def fake_border(stdscr_arg, height, width):
@@ -127,12 +128,13 @@ def test_render_draws_snake_food_and_score(monkeypatch):
 
     rendering.render(stdscr, 10, 20, snake, food, 3)
 
+    sprites = rendering.get_sprites()
     assert stdscr.erased is True
     assert stdscr.refreshed is True
     assert border_calls == [(10, 20)]
-    assert (3, 3, "*") in addch_calls
-    assert (5, 5, "@") in addch_calls
-    assert (5, 4, "o") in addch_calls
+    assert (3, 3, sprites["food"]) in addch_calls
+    assert (5, 5, sprites["head"]) in addch_calls
+    assert (5, 4, sprites["body"]) in addch_calls
     assert any("Score: 3" in text for _, _, text in addstr_calls)
 
 
