@@ -1,58 +1,10 @@
-"""High score persistence and rendering."""
+"""Terminal high score UI and initials prompt."""
 
 import curses
-import json
-import os
 
 from .background import init_starfield, render_starfield, update_starfield
 from .rendering import draw_border, draw_centered_text, get_palette
-
-_DEFAULT_PATH = os.path.join(
-    os.path.expanduser("~"), ".terminal_snake_scores.json"
-)
-_MAX_SCORES = 10
-_NAME_LEN = 3
-
-
-def load_scores(path=_DEFAULT_PATH):
-    """Load scores from disk; return an empty list on failure."""
-    try:
-        with open(path, "r", encoding="utf-8") as handle:
-            data = json.load(handle)
-        scores = []
-        for item in data:
-            if isinstance(item, dict):
-                name = str(item.get("name", "???"))[:_NAME_LEN]
-                score = int(item.get("score", 0))
-                scores.append({"name": name, "score": score})
-            else:
-                scores.append({"name": "???", "score": int(item)})
-        return sorted(scores, key=lambda row: row["score"], reverse=True)[
-            :_MAX_SCORES
-        ]
-    except (OSError, ValueError, TypeError):
-        return []
-
-
-def save_scores(scores, path=_DEFAULT_PATH):
-    """Persist scores to disk, best-effort."""
-    try:
-        with open(path, "w", encoding="utf-8") as handle:
-            json.dump(scores, handle)
-    except OSError:
-        return False
-    return True
-
-
-def record_score(score, name, scores):
-    """Insert a new score into the list and keep the top 10."""
-    updated = list(scores)
-    if score is not None:
-        updated.append({"name": name or "???", "score": int(score)})
-    updated = sorted(updated, key=lambda row: row["score"], reverse=True)[
-        :_MAX_SCORES
-    ]
-    return updated
+from ..scores_store import NAME_LEN
 
 
 def prompt_initials(stdscr, height, width):
@@ -74,7 +26,7 @@ def prompt_initials(stdscr, height, width):
             "Enter your initials",
             palette["hud"],
         )
-        display = "".join(initials).ljust(_NAME_LEN, "_")
+        display = "".join(initials).ljust(NAME_LEN, "_")
         draw_centered_text(
             stdscr, height // 2 + 1, width, display, palette["message"]
         )
@@ -86,11 +38,11 @@ def prompt_initials(stdscr, height, width):
         key = stdscr.getch()
         if key in (10, 13, curses.KEY_ENTER):
             if initials:
-                return "".join(initials).ljust(_NAME_LEN, "_")
+                return "".join(initials).ljust(NAME_LEN, "_")
         elif key in (curses.KEY_BACKSPACE, 127, 8):
             if initials:
                 initials.pop()
-        elif 32 <= key <= 126 and len(initials) < _NAME_LEN:
+        elif 32 <= key <= 126 and len(initials) < NAME_LEN:
             initials.append(chr(key).upper())
 
 

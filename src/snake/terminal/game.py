@@ -4,19 +4,14 @@ import curses
 import sys
 import time
 
-from .input import next_direction
 from .background import init_starfield, update_starfield
+from .input import next_direction
 from .menu import menu_loop
 from .rendering import init_style, render, render_center_message
-from .scores import (
-    load_scores,
-    prompt_initials,
-    record_score,
-    render_scores,
-    save_scores,
-)
-from .state import make_initial_snake, place_food
+from .scores import prompt_initials, render_scores
 from .terminal import ensure_min_size
+from ..core import compute_speed, new_game
+from ..scores_store import load_scores, record_score, save_scores
 
 
 def _game_loop(stdscr):
@@ -32,10 +27,7 @@ def _game_loop(stdscr):
     if not ensure_min_size(stdscr, height, width):
         return 0
 
-    snake, snake_set = make_initial_snake(height, width)
-    direction = (0, 1)
-    food = place_food(height, width, snake)
-    score = 0
+    state = new_game(height, width)
     starfield = init_starfield(height, width)
 
     last_move = time.monotonic()
@@ -49,68 +41,64 @@ def _game_loop(stdscr):
         if key == curses.KEY_RESIZE:
             height, width = stdscr.getmaxyx()
             if not ensure_min_size(stdscr, height, width):
-                return score
+                return state.score
             starfield = init_starfield(height, width)
-            render(stdscr, height, width, snake, food, score, starfield)
+            render(
+                stdscr,
+                height,
+                width,
+                state.snake,
+                state.food,
+                state.score,
+                starfield,
+            )
             continue
-        direction = next_direction(key, direction)
+        state.set_direction(next_direction(key, state.direction))
 
         # Timing phase: keep movement speed stable as the snake grows.
         now = time.monotonic()
-        speed = max(0.05, base_speed - (len(snake) * 0.002))
+        speed = compute_speed(len(state.snake), base_speed=base_speed)
         if now - last_move < speed:
             time.sleep(0.005)
             continue
         last_move = now
 
-        # Movement phase: compute the next head position.
-        head_y, head_x = snake[0]
-        next_head = (head_y + direction[0], head_x + direction[1])
-
         # Collision phase: walls or self.
-        if (
-            next_head[0] <= 0
-            or next_head[0] >= height - 1
-            or next_head[1] <= 0
-            or next_head[1] >= width - 1
-            or next_head in snake_set
-        ):
+        status = state.step()
+        if status == "game_over":
             break
-
-        snake.appendleft(next_head)
-        snake_set.add(next_head)
-
-        # State update: grow on food, otherwise move tail forward.
-        if next_head == food:
-            score += 1
-            food = place_food(height, width, snake)
-            if food is None:
-                render(stdscr, height, width, snake, food, score)
-                stdscr.nodelay(False)
-                render_center_message(
-                    stdscr,
-                    height,
-                    width,
-                    ["You Win!", f"Final score: {score}", "Press any key"],
-                )
-                stdscr.getch()
-                return score
-        else:
-            tail = snake.pop()
-            snake_set.discard(tail)
+        if status == "win":
+            render(stdscr, height, width, state.snake, state.food, state.score)
+            stdscr.nodelay(False)
+            render_center_message(
+                stdscr,
+                height,
+                width,
+                ["You Win!", f"Final score: {state.score}", "Press any key"],
+            )
+            stdscr.getch()
+            return state.score
 
         update_starfield(starfield, height, width)
-        render(stdscr, height, width, snake, food, score, starfield)
+        render(
+            stdscr,
+            height,
+            width,
+            state.snake,
+            state.food,
+            state.score,
+            starfield,
+        )
 
     stdscr.nodelay(False)
     render_center_message(
         stdscr,
         height,
         width,
-        ["Game Over", f"Final score: {score}", "Press any key"],
+        ["Game Over", f"Final score: {state.score}", "Press any key"],
     )
     stdscr.getch()
-    return score
+    return state.score
 
 
 def _main_loop(stdscr):

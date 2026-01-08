@@ -18,13 +18,25 @@ def make_initial_snake(height, width):
     return snake, {pos for pos in snake}
 
 
-def place_food(height, width, snake):
+def place_food(
+    height,
+    width,
+    snake,
+    min_y=1,
+    max_y=None,
+    min_x=1,
+    max_x=None,
+):
     """Place food in a random unoccupied cell, or return None if full."""
-    max_cells = (height - 2) * (width - 2)
+    max_y = height - 2 if max_y is None else max_y
+    max_x = width - 2 if max_x is None else max_x
+    if max_y < min_y or max_x < min_x:
+        return None
+    max_cells = (max_y - min_y + 1) * (max_x - min_x + 1)
     if len(snake) >= max_cells:
         return None
     while True:
-        y = random.randint(1, height - 2)
-        x = random.randint(1, width - 2)
+        y = random.randint(min_y, max_y)
+        x = random.randint(min_x, max_x)
         if (y, x) not in snake:
             return (y, x)
