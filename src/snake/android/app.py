@@ -19,7 +19,7 @@ from kivy.uix.widget import Widget
 
 from ..core import compute_speed, new_game
 from ..scores_store import NAME_LEN, load_scores, record_score, reset_scores, save_scores
-from .audio import AndroidAudio
+from .sound import TonePlayer
 
 
 _DIRECTIONS = {
@@ -38,6 +38,28 @@ _NEON = {
     "green": (0.35, 1.0, 0.6, 1.0),
     "white": (0.98, 0.99, 1.0, 1.0),
 }
+
+
+def _menu_sequence():
+    """Return a Blade Runner-style loop (freqs, duration_ms, volume)."""
+    return [
+        ([110, 165, 220], 420, 0.2),
+        ([98, 147, 196], 360, 0.18),
+        ([110, 165, 220], 420, 0.2),
+        ([123, 184, 246], 380, 0.2),
+        ([92, 138, 184], 480, 0.18),
+        ([110, 165, 220], 420, 0.2),
+    ]
+
+
+def _game_sequence():
+    """Return a slower, low-register loop for gameplay background."""
+    return [
+        ([82, 123, 165], 420, 0.15),
+        ([98, 147, 196], 380, 0.15),
+        ([73, 110, 147], 460, 0.14),
+        ([98, 147, 196], 380, 0.15),
+    ]
 
 
 def _is_high_score(score, scores_path):
@@ -252,11 +274,11 @@ class MenuScreen(Screen):
 
     def on_pre_enter(self, *args):
         if self._audio is not None:
-            self._audio.play_menu()
+            self._audio.play_sequence("menu_theme", _menu_sequence(), loop=True)
 
     def on_leave(self, *args):
         if self._audio is not None:
-            self._audio.stop_music()
+            self._audio.stop_sequence("menu_theme")
 
 
 class GameScreen(Screen):
@@ -282,10 +304,10 @@ class GameScreen(Screen):
 
         controls = NeonPanel(size_hint=(1, 0.26), padding=8)
         dpad = GridLayout(cols=3, rows=3, spacing=6)
-        btn_up = NeonButton(text="▲")
-        btn_left = NeonButton(text="◀")
-        btn_down = NeonButton(text="▼")
-        btn_right = NeonButton(text="▶")
+        btn_up = NeonButton(text="UP")
+        btn_left = NeonButton(text="LEFT")
+        btn_down = NeonButton(text="DOWN")
+        btn_right = NeonButton(text="RIGHT")
         self._pulse_buttons = [btn_left, btn_up, btn_down, btn_right]
         for btn, direction in (
             (btn_left, "left"),
@@ -312,13 +334,13 @@ class GameScreen(Screen):
         self.last_move = time.monotonic()
         self.score_label.text = "Score: 0"
         if self._audio is not None:
-            self._audio.play_game()
+            self._audio.play_sequence("game_theme", _game_sequence(), loop=True)
         if self._tick_event is None:
             self._tick_event = Clock.schedule_interval(self._tick, 1 / 30)
 
     def on_leave(self, *args):
         if self._audio is not None:
-            self._audio.stop_music()
+            self._audio.stop_sequence("game_theme")
         if self._tick_event is not None:
             self._tick_event.cancel()
             self._tick_event = None
@@ -332,7 +354,7 @@ class GameScreen(Screen):
     def _set_dir(self, key):
         changed = self.board.state.set_direction(_DIRECTIONS[key])
         if changed and self._audio is not None:
-            self._audio.play_turn()
+            self._audio.play("turn", 520, 50, volume=0.5)
 
     def _tick(self, _dt):
         now = time.monotonic()
@@ -346,16 +368,26 @@ class GameScreen(Screen):
         self.board._redraw()
 
         if status == "ate" and self._audio is not None:
-            self._audio.play_eat()
+            self._audio.play("eat", 880, 70, volume=0.7)
 
         if status in ("game_over", "win"):
             if self._audio is not None:
                 if status == "win":
-                    self._audio.play_win()
+                    self._audio.play("win", 660, 180, volume=0.8)
+                    self._audio.play_chord(
+                        "win_chord", [660, 825, 990], 160, volume=0.6
+                    )
                 else:
-                    self._audio.play_game_over()
+                    self._audio.play("game_over", 220, 180, volume=0.8)
                 if _is_high_score(self.board.state.score, self._scores_path):
-                    self._audio.play_high_score()
+                    self._audio.play_sequence(
+                        "high_score",
+                        [
+                            ([880, 1100], 80, 0.7),
+                            ([990, 1320], 80, 0.7),
+                            ([1175, 1568], 120, 0.7),
+                        ],
+                    )
             self._show_game_over(status)
 
     def _show_game_over(self, status):
@@ -364,7 +396,7 @@ class GameScreen(Screen):
             self._tick_event.cancel()
             self._tick_event = None
         if self._audio is not None:
-            self._audio.stop_music()
+            self._audio.stop_sequence("game_theme")
         prompt = NeonPanel(orientation="vertical", spacing=8, padding=12)
         prompt.add_widget(Label(text=title, color=_NEON["white"], font_size=24))
         prompt.add_widget(Label(text="Enter your initials", color=_NEON["white"]))
@@ -444,10 +476,7 @@ class SnakeApp(App):
     def build(self):
         Window.clearcolor = _NEON["bg"]
         scores_path = os.path.join(self.user_data_dir, "scores.json")
-        assets_dir = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "assets")
-        )
-        self._audio = AndroidAudio(self.user_data_dir, assets_dir)
+        self._audio = TonePlayer(self.user_data_dir)
         _reset_marker = os.path.join(self.user_data_dir, ".scores_reset_v1")
         if not os.path.exists(_reset_marker):
             reset_scores(scores_path)
