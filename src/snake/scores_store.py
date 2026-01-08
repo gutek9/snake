@@ -51,6 +51,11 @@ def record_score(score, name, scores):
     return updated
 
 
+def reset_scores(path=DEFAULT_PATH):
+    """Clear scores on disk."""
+    return save_scores([], path)
+
+
 def default_scores_path():
     """Return the default score file path for terminal installs."""
     return DEFAULT_PATH
