@@ -111,6 +111,12 @@ def safe_addstr(stdscr, y, x, text, attr=None):
         pass
 
 
+def draw_centered_text(stdscr, y, width, text, attr=None):
+    """Draw a single centered line."""
+    start_x = max(1, width // 2 - len(text) // 2)
+    safe_addstr(stdscr, y, start_x, text, attr)
+
+
 def draw_border(stdscr, height, width):
     """Draw a rectangular border around the playable area."""
     palette = get_palette()
@@ -154,8 +160,7 @@ def render_center_message(stdscr, height, width, lines):
     palette = get_palette()
     start_y = height // 2
     for offset, line in enumerate(lines):
-        start_x = max(1, width // 2 - len(line) // 2)
-        safe_addstr(
-            stdscr, start_y + offset, start_x, line, palette["message"]
+        draw_centered_text(
+            stdscr, start_y + offset, width, line, palette["message"]
         )
     stdscr.refresh()

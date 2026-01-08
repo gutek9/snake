@@ -19,7 +19,6 @@ def _game_loop(stdscr):
     curses.cbreak()
     stdscr.keypad(True)
     stdscr.nodelay(True)
-    init_style(stdscr)
 
     # Bootstrap the initial board and starting state.
     height, width = stdscr.getmaxyx()

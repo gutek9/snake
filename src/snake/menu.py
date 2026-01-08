@@ -2,7 +2,7 @@
 
 import curses
 
-from .rendering import draw_border, get_palette, safe_addstr
+from .rendering import draw_border, draw_centered_text, get_palette
 
 _OPTIONS = ["New Game", "High Scores", "Exit"]
 
@@ -13,35 +13,17 @@ def _render_menu(stdscr, height, width, selected):
     draw_border(stdscr, height, width)
 
     title = "Terminal Snake"
-    safe_addstr(
-        stdscr,
-        2,
-        max(1, width // 2 - len(title) // 2),
-        title,
-        palette["hud"],
-    )
+    draw_centered_text(stdscr, 2, width, title, palette["hud"])
 
     start_y = height // 2 - len(_OPTIONS) // 2
     for idx, label in enumerate(_OPTIONS):
         attr = palette["hud"]
         if idx == selected:
             attr |= curses.A_REVERSE
-        safe_addstr(
-            stdscr,
-            start_y + idx,
-            max(1, width // 2 - len(label) // 2),
-            label,
-            attr,
-        )
+        draw_centered_text(stdscr, start_y + idx, width, label, attr)
 
     footer = "Use arrows or W/S, Enter to select"
-    safe_addstr(
-        stdscr,
-        height - 2,
-        max(1, width // 2 - len(footer) // 2),
-        footer,
-        palette["hud"],
-    )
+    draw_centered_text(stdscr, height - 2, width, footer, palette["hud"])
 
     stdscr.refresh()
 
