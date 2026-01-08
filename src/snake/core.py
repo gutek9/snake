@@ -22,10 +22,13 @@ class GameState:
     def set_direction(self, proposed):
         """Update direction, preventing a 180-degree reversal."""
         if proposed is None:
-            return
+            return False
         if proposed[0] == -self.direction[0] and proposed[1] == -self.direction[1]:
-            return
+            return False
+        if proposed == self.direction:
+            return False
         self.direction = proposed
+        return True
 
     def step(self):
         """Advance the game by one tick; return a status string."""
