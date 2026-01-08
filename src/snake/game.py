@@ -2,9 +2,13 @@ import curses
 import random
 import sys
 import time
+from collections import deque
 
 
 def _place_food(height, width, snake):
+    max_cells = (height - 2) * (width - 2)
+    if len(snake) >= max_cells:
+        return None
     while True:
         y = random.randint(1, height - 2)
         x = random.randint(1, width - 2)
@@ -29,10 +33,10 @@ def _safe_addstr(stdscr, y, x, text):
 def _draw_border(stdscr, height, width):
     max_y = height - 1
     max_x = width - 1
-    for x in range(width - 1):
+    for x in range(width):
         _safe_addch(stdscr, 0, x, "#")
         _safe_addch(stdscr, max_y, x, "#")
-    for y in range(height - 1):
+    for y in range(height):
         _safe_addch(stdscr, y, 0, "#")
         _safe_addch(stdscr, y, max_x, "#")
 
@@ -42,12 +46,13 @@ def _render(stdscr, height, width, snake, food, score):
     _draw_border(stdscr, height, width)
     _safe_addstr(stdscr, 0, 2, f" Score: {score} ")
 
-    fy, fx = food
-    _safe_addch(stdscr, fy, fx, "*")
+    if food is not None:
+        fy, fx = food
+        _safe_addch(stdscr, fy, fx, "*")
 
     head = snake[0]
     _safe_addch(stdscr, head[0], head[1], "@")
-    for y, x in snake[1:]:
+    for y, x in list(snake)[1:]:
         _safe_addch(stdscr, y, x, "o")
 
     stdscr.refresh()
@@ -78,12 +83,11 @@ def _ensure_min_size(stdscr, height, width):
     min_width = 20
     if height < min_height or width < min_width:
         stdscr.clear()
-        stdscr.addstr(
-            0,
-            0,
+        message = (
             "Terminal too small. Resize to at least "
-            f"{min_width}x{min_height} and try again.",
+            f"{min_width}x{min_height} and try again."
         )
+        _safe_addstr(stdscr, 0, 0, message[: max(0, width - 1)])
         stdscr.refresh()
         stdscr.getch()
         return False
@@ -103,11 +107,14 @@ def _game_loop(stdscr):
 
     start_y = height // 2
     start_x = width // 2
-    snake = [
-        (start_y, start_x),
-        (start_y, start_x - 1),
-        (start_y, start_x - 2),
-    ]
+    snake = deque(
+        [
+            (start_y, start_x),
+            (start_y, start_x - 1),
+            (start_y, start_x - 2),
+        ]
+    )
+    snake_set = {pos for pos in snake}
     direction = (0, 1)
     food = _place_food(height, width, snake)
     score = 0
@@ -119,6 +126,12 @@ def _game_loop(stdscr):
         key = stdscr.getch()
         if key in (ord("q"), ord("Q")):
             break
+        if key == curses.KEY_RESIZE:
+            height, width = stdscr.getmaxyx()
+            if not _ensure_min_size(stdscr, height, width):
+                return score
+            _render(stdscr, height, width, snake, food, score)
+            continue
         direction = _next_direction(key, direction)
 
         now = time.monotonic()
@@ -136,17 +149,43 @@ def _game_loop(stdscr):
             or next_head[0] >= height - 1
             or next_head[1] <= 0
             or next_head[1] >= width - 1
-            or next_head in snake
+            or next_head in snake_set
         ):
             break
 
-        snake.insert(0, next_head)
+        snake.appendleft(next_head)
+        snake_set.add(next_head)
 
         if next_head == food:
             score += 1
             food = _place_food(height, width, snake)
+            if food is None:
+                _render(stdscr, height, width, snake, food, score)
+                stdscr.nodelay(False)
+                _safe_addstr(
+                    stdscr,
+                    height // 2,
+                    max(1, width // 2 - 4),
+                    "You Win!",
+                )
+                _safe_addstr(
+                    stdscr,
+                    height // 2 + 1,
+                    max(1, width // 2 - 12),
+                    f"Final score: {score}",
+                )
+                _safe_addstr(
+                    stdscr,
+                    height // 2 + 2,
+                    max(1, width // 2 - 12),
+                    "Press any key",
+                )
+                stdscr.refresh()
+                stdscr.getch()
+                return score
         else:
-            snake.pop()
+            tail = snake.pop()
+            snake_set.discard(tail)
 
         _render(stdscr, height, width, snake, food, score)
 

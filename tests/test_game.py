@@ -45,6 +45,14 @@ def test_place_food_skips_snake(monkeypatch):
     assert food == (2, 3)
 
 
+def test_place_food_returns_none_when_full():
+    snake = [(1, 1)]
+
+    food = game._place_food(3, 3, snake)
+
+    assert food is None
+
+
 def test_next_direction_ignores_unknown_key():
     assert game._next_direction(ord("x"), (0, 1)) == (0, 1)
 
@@ -85,9 +93,9 @@ def test_draw_border_marks_edges(monkeypatch):
 
     expected = {
         (0, 0, "#"),
-        (0, 4, "#"),
+        (0, 5, "#"),
         (3, 0, "#"),
-        (3, 4, "#"),
+        (3, 5, "#"),
         (2, 0, "#"),
         (2, 5, "#"),
     }
