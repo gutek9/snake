@@ -4,7 +4,7 @@ title = Terminal Snake
 package.name = terminalsnake
 package.domain = org.snake
 source.dir = src
-source.include_exts = py,png,jpg,kv
+source.include_exts = py,png,jpg,kv,wav
 version = 0.1.0
 
 android.sdk_path = /Users/madamek/.buildozer/android/platform/android-sdk
