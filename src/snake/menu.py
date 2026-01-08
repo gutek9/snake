@@ -2,14 +2,16 @@
 
 import curses
 
+from .background import init_starfield, render_starfield, update_starfield
 from .rendering import draw_border, draw_centered_text, get_palette
 
 _OPTIONS = ["New Game", "High Scores", "Exit"]
 
 
-def _render_menu(stdscr, height, width, selected):
+def _render_menu(stdscr, height, width, selected, starfield):
     palette = get_palette()
     stdscr.erase()
+    render_starfield(stdscr, height, width, starfield)
     draw_border(stdscr, height, width)
 
     title = "Terminal Snake"
@@ -28,14 +30,17 @@ def _render_menu(stdscr, height, width, selected):
     stdscr.refresh()
 
 
-def menu_loop(stdscr, height, width):
+def menu_loop(stdscr, height, width, starfield):
     """Return the selected menu option string."""
     selected = 0
-    stdscr.nodelay(False)
+    stdscr.timeout(80)
 
     while True:
-        _render_menu(stdscr, height, width, selected)
+        update_starfield(starfield, height, width)
+        _render_menu(stdscr, height, width, selected, starfield)
         key = stdscr.getch()
+        if key == -1:
+            continue
         if key in (curses.KEY_UP, ord("w"), ord("W")):
             selected = (selected - 1) % len(_OPTIONS)
         elif key in (curses.KEY_DOWN, ord("s"), ord("S")):
@@ -46,3 +51,4 @@ def menu_loop(stdscr, height, width):
             return "Exit"
         elif key == curses.KEY_RESIZE:
             height, width = stdscr.getmaxyx()
+            starfield.update(init_starfield(height, width))

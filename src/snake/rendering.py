@@ -11,6 +11,7 @@ _PALETTE = {
     "body": 0,
     "hud": 0,
     "message": 0,
+    "stars": 0,
 }
 _SPRITES = {
     "hline": "-",
@@ -50,6 +51,7 @@ def init_colors(stdscr):
             "body": curses.color_pair(4),
             "hud": curses.color_pair(5) | curses.A_BOLD,
             "message": curses.color_pair(6) | curses.A_BOLD,
+            "stars": curses.color_pair(5) | curses.A_DIM,
         }
     )
     return _PALETTE
@@ -135,11 +137,15 @@ def draw_border(stdscr, height, width):
         safe_addch(stdscr, y, max_x, sprites["vline"], palette["border"])
 
 
-def render(stdscr, height, width, snake, food, score):
+def render(stdscr, height, width, snake, food, score, starfield=None):
     """Render the current game state to the screen."""
     palette = get_palette()
     sprites = get_sprites()
     stdscr.erase()
+    if starfield is not None:
+        from .background import render_starfield
+
+        render_starfield(stdscr, height, width, starfield)
     draw_border(stdscr, height, width)
     safe_addstr(stdscr, 0, 2, f" Score: {score} ", palette["hud"])
 

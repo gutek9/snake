@@ -5,9 +5,16 @@ import sys
 import time
 
 from .input import next_direction
+from .background import init_starfield, update_starfield
 from .menu import menu_loop
 from .rendering import init_style, render, render_center_message
-from .scores import load_scores, record_score, render_scores, save_scores
+from .scores import (
+    load_scores,
+    prompt_initials,
+    record_score,
+    render_scores,
+    save_scores,
+)
 from .state import make_initial_snake, place_food
 from .terminal import ensure_min_size
 
@@ -29,6 +36,7 @@ def _game_loop(stdscr):
     direction = (0, 1)
     food = place_food(height, width, snake)
     score = 0
+    starfield = init_starfield(height, width)
 
     last_move = time.monotonic()
     base_speed = 0.12
@@ -42,7 +50,8 @@ def _game_loop(stdscr):
             height, width = stdscr.getmaxyx()
             if not ensure_min_size(stdscr, height, width):
                 return score
-            render(stdscr, height, width, snake, food, score)
+            starfield = init_starfield(height, width)
+            render(stdscr, height, width, snake, food, score, starfield)
             continue
         direction = next_direction(key, direction)
 
@@ -90,7 +99,8 @@ def _game_loop(stdscr):
             tail = snake.pop()
             snake_set.discard(tail)
 
-        render(stdscr, height, width, snake, food, score)
+        update_starfield(starfield, height, width)
+        render(stdscr, height, width, snake, food, score, starfield)
 
     stdscr.nodelay(False)
     render_center_message(
@@ -118,16 +128,19 @@ def _main_loop(stdscr):
         if not ensure_min_size(stdscr, height, width):
             return
 
-        choice = menu_loop(stdscr, height, width)
+        starfield = init_starfield(height, width)
+        choice = menu_loop(stdscr, height, width, starfield)
         if choice == "Exit":
             return
         if choice == "High Scores":
-            render_scores(stdscr, height, width, scores)
+            render_scores(stdscr, height, width, scores, starfield)
             continue
 
         stdscr.clear()
         score = _game_loop(stdscr)
-        scores = record_score(score, scores)
+        height, width = stdscr.getmaxyx()
+        name = prompt_initials(stdscr, height, width)
+        scores = record_score(score, name, scores)
         save_scores(scores)
 
 
