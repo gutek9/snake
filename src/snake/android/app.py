@@ -18,7 +18,8 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
 
 from ..core import compute_speed, new_game
-from ..scores_store import NAME_LEN, load_scores, record_score, save_scores
+from ..scores_store import NAME_LEN, load_scores, record_score, reset_scores, save_scores
+from .audio import AndroidAudio
 
 
 _DIRECTIONS = {
@@ -37,6 +38,14 @@ _NEON = {
     "green": (0.35, 1.0, 0.6, 1.0),
     "white": (0.98, 0.99, 1.0, 1.0),
 }
+
+
+def _is_high_score(score, scores_path):
+    """Check if the score beats the current best."""
+    scores = load_scores(scores_path)
+    if not scores:
+        return score > 0
+    return score >= max(row["score"] for row in scores)
 
 
 class NeonButton(Button):
@@ -204,6 +213,7 @@ class SnakeBoard(Widget):
 class MenuScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self._audio = None
         layout = NeonPanel(orientation="vertical", padding=28, spacing=18)
         title = Label(
             text="[b]CODEX SNAKE[/b]",
@@ -237,6 +247,17 @@ class MenuScreen(Screen):
         layout.add_widget(btn_exit)
         self.add_widget(layout)
 
+    def set_audio(self, audio):
+        self._audio = audio
+
+    def on_pre_enter(self, *args):
+        if self._audio is not None:
+            self._audio.play_menu()
+
+    def on_leave(self, *args):
+        if self._audio is not None:
+            self._audio.stop_music()
+
 
 class GameScreen(Screen):
     def __init__(self, **kwargs):
@@ -245,6 +266,7 @@ class GameScreen(Screen):
         self.base_speed = 0.12
         self._tick_event = None
         self._scores_path = None
+        self._audio = None
 
         root = BoxLayout(orientation="vertical", spacing=8, padding=10)
         self.score_label = Label(
@@ -289,10 +311,14 @@ class GameScreen(Screen):
         self.board.reset()
         self.last_move = time.monotonic()
         self.score_label.text = "Score: 0"
+        if self._audio is not None:
+            self._audio.play_game()
         if self._tick_event is None:
             self._tick_event = Clock.schedule_interval(self._tick, 1 / 30)
 
     def on_leave(self, *args):
+        if self._audio is not None:
+            self._audio.stop_music()
         if self._tick_event is not None:
             self._tick_event.cancel()
             self._tick_event = None
@@ -300,8 +326,13 @@ class GameScreen(Screen):
     def set_scores_path(self, path):
         self._scores_path = path
 
+    def set_audio(self, audio):
+        self._audio = audio
+
     def _set_dir(self, key):
-        self.board.set_direction(_DIRECTIONS[key])
+        changed = self.board.state.set_direction(_DIRECTIONS[key])
+        if changed and self._audio is not None:
+            self._audio.play_turn()
 
     def _tick(self, _dt):
         now = time.monotonic()
@@ -314,7 +345,17 @@ class GameScreen(Screen):
         self.score_label.text = f"Score: {self.board.state.score}"
         self.board._redraw()
 
+        if status == "ate" and self._audio is not None:
+            self._audio.play_eat()
+
         if status in ("game_over", "win"):
+            if self._audio is not None:
+                if status == "win":
+                    self._audio.play_win()
+                else:
+                    self._audio.play_game_over()
+                if _is_high_score(self.board.state.score, self._scores_path):
+                    self._audio.play_high_score()
             self._show_game_over(status)
 
     def _show_game_over(self, status):
@@ -322,6 +363,8 @@ class GameScreen(Screen):
         if self._tick_event is not None:
             self._tick_event.cancel()
             self._tick_event = None
+        if self._audio is not None:
+            self._audio.stop_music()
         prompt = NeonPanel(orientation="vertical", spacing=8, padding=12)
         prompt.add_widget(Label(text=title, color=_NEON["white"], font_size=24))
         prompt.add_widget(Label(text="Enter your initials", color=_NEON["white"]))
@@ -336,10 +379,19 @@ class GameScreen(Screen):
         )
         prompt.add_widget(text)
 
-        ok_btn = NeonButton(text="Save", size_hint=(1, 0.4))
-        prompt.add_widget(ok_btn)
+        actions = BoxLayout(orientation="horizontal", spacing=8, size_hint=(1, 0.4))
+        ok_btn = NeonButton(text="Save")
+        cancel_btn = NeonButton(text="Cancel")
+        actions.add_widget(ok_btn)
+        actions.add_widget(cancel_btn)
+        prompt.add_widget(actions)
 
-        popup = Popup(title=title, content=prompt, size_hint=(0.8, 0.6))
+        popup = Popup(
+            title=title,
+            content=prompt,
+            size_hint=(0.8, 0.6),
+            auto_dismiss=False,
+        )
 
         def on_save(*_args):
             initials = (text.text.strip().upper() or "???")[:NAME_LEN]
@@ -350,6 +402,8 @@ class GameScreen(Screen):
             self.manager.current = "menu"
 
         ok_btn.bind(on_press=on_save)
+        cancel_btn.bind(on_press=lambda *_: popup.dismiss())
+        popup.bind(on_dismiss=lambda *_: setattr(self.manager, "current", "menu"))
         popup.open()
 
 
@@ -390,6 +444,15 @@ class SnakeApp(App):
     def build(self):
         Window.clearcolor = _NEON["bg"]
         scores_path = os.path.join(self.user_data_dir, "scores.json")
+        assets_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..", "assets")
+        )
+        self._audio = AndroidAudio(self.user_data_dir, assets_dir)
+        _reset_marker = os.path.join(self.user_data_dir, ".scores_reset_v1")
+        if not os.path.exists(_reset_marker):
+            reset_scores(scores_path)
+            with open(_reset_marker, "w", encoding="utf-8") as handle:
+                handle.write("ok")
 
         sm = ScreenManager()
         menu = MenuScreen(name="menu")
@@ -398,6 +461,8 @@ class SnakeApp(App):
 
         game.set_scores_path(scores_path)
         scores.set_scores_path(scores_path)
+        menu.set_audio(self._audio)
+        game.set_audio(self._audio)
 
         sm.add_widget(menu)
         sm.add_widget(game)
