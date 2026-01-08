@@ -5,7 +5,9 @@ import sys
 import time
 
 from .input import next_direction
-from .rendering import render, render_center_message
+from .menu import menu_loop
+from .rendering import init_style, render, render_center_message
+from .scores import load_scores, record_score, render_scores, save_scores
 from .state import make_initial_snake, place_food
 from .terminal import ensure_min_size
 
@@ -17,6 +19,7 @@ def _game_loop(stdscr):
     curses.cbreak()
     stdscr.keypad(True)
     stdscr.nodelay(True)
+    init_style(stdscr)
 
     # Bootstrap the initial board and starting state.
     height, width = stdscr.getmaxyx()
@@ -101,12 +104,40 @@ def _game_loop(stdscr):
     return score
 
 
+def _main_loop(stdscr):
+    """Menu-driven entry point for the game session."""
+    curses.curs_set(0)
+    curses.noecho()
+    curses.cbreak()
+    stdscr.keypad(True)
+    init_style(stdscr)
+
+    scores = load_scores()
+
+    while True:
+        height, width = stdscr.getmaxyx()
+        if not ensure_min_size(stdscr, height, width):
+            return
+
+        choice = menu_loop(stdscr, height, width)
+        if choice == "Exit":
+            return
+        if choice == "High Scores":
+            render_scores(stdscr, height, width, scores)
+            continue
+
+        stdscr.clear()
+        score = _game_loop(stdscr)
+        scores = record_score(score, scores)
+        save_scores(scores)
+
+
 def run():
     """Entry point for the CLI and module execution."""
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         print("Snake needs an interactive terminal (TTY). Run it in a terminal.")
         return
-    curses.wrapper(_game_loop)
+    curses.wrapper(_main_loop)
 
 
 if __name__ == "__main__":
