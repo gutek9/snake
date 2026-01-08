@@ -25,6 +25,7 @@ Before the first build, check dependencies:
 
 - `scripts/check_android_deps.sh`
 - `scripts/setup_android_sdkmanager.sh` (only if sdkmanager is missing)
+- `tools/convert_tracker_to_wav.sh` (generate `assets/*.wav` from tracker files)
 
 1) Install Buildozer and Android SDK/NDK
 2) `buildozer android debug`
