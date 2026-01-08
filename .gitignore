@@ -4,4 +4,3 @@ __pycache__/
 *.pyc
 .python-version
 commandlinetools-*.zip
-src/assets/*.wav
