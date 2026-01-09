@@ -2,31 +2,30 @@
 
 Android-only Snake built with Kivy.
 
-## Run
+## Quick Start
 
-- Build and deploy using `buildozer android debug`
+Run the bootstrap script once from a fresh clone:
 
-## Android (Kivy)
+```bash
+chmod +x scripts/bootstrap_android.sh
+./scripts/bootstrap_android.sh
+```
 
-This repo includes a Kivy-based front end for Android.
+## Build APK (Buildozer)
 
-### Run locally (desktop)
-
-- `python src/main.py`
-
-### Build APK (Buildozer)
-
-Before the first build, check dependencies:
-
-- `scripts/check_android_deps.sh`
-- `scripts/setup_android_sdkmanager.sh` (only if sdkmanager is missing)
-
-1) Install Buildozer and Android SDK/NDK
-2) `buildozer android debug`
-3) `buildozer android deploy run`
+```bash
+buildozer android debug
+buildozer android deploy run
+```
 
 The Buildozer config lives at `buildozer.spec`.
 
+## Run locally (desktop)
+
+```bash
+python3 src/main.py
+```
+
 ## Architecture
 
-- See `docs/architecture.md`
+See `docs/architecture.md`.
