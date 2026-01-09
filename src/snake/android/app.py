@@ -31,7 +31,6 @@ class SnakeApp(App):
 
         game.set_scores_path(scores_path)
         scores.set_scores_path(scores_path)
-        menu.set_audio(self._audio)
         game.set_audio(self._audio)
 
         sm.add_widget(menu)

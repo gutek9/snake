@@ -23,6 +23,7 @@ if command -v pyenv >/dev/null 2>&1; then
     PYTHON_BIN="$(pyenv which python)"
     echo "==> Using pyenv Python ${PYENV_VERSION} for buildozer."
     echo "==> Set p4a.python_path to this interpreter in buildozer.spec."
+    export P4A_PYTHON_PATH="$PYTHON_BIN"
   else
     echo "==> pyenv detected, but Python 3.10.14 is not installed."
     echo "    Install with: pyenv install 3.10.14"

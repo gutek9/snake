@@ -93,6 +93,14 @@ class SpaceBackdrop(Widget):
         if self._anim is None:
             self._anim = Clock.schedule_interval(self._tick, 1 / 24)
 
+    def start_animation(self):
+        self._start_animation()
+
+    def stop_animation(self):
+        if self._anim is not None:
+            self._anim.cancel()
+            self._anim = None
+
     def _init_stars(self):
         self._stars = []
         for i in range(40):
@@ -162,6 +170,15 @@ class TitleOverlay(FloatLayout):
         self.add_widget(self._title)
         self._glitch = Clock.schedule_interval(self._tick_glitch, 1 / 12)
         self._phase = 0.0
+
+    def start_animation(self):
+        if self._glitch is None:
+            self._glitch = Clock.schedule_interval(self._tick_glitch, 1 / 12)
+
+    def stop_animation(self):
+        if self._glitch is not None:
+            self._glitch.cancel()
+            self._glitch = None
 
     def _tick_glitch(self, dt):
         self._phase += dt * 3.0

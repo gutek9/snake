@@ -33,7 +33,6 @@ def _is_high_score(score, scores_path):
 class MenuScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._audio = None
         self._title = None
         self._flash_phase = 0.0
         self._menu_anim = None
@@ -68,9 +67,6 @@ class MenuScreen(Screen):
         layout.add_widget(btn_scores)
         layout.add_widget(btn_exit)
         self.add_widget(layout)
-
-    def set_audio(self, audio):
-        self._audio = audio
 
     def on_pre_enter(self, *args):
         if self._menu_anim is None:
@@ -211,6 +207,11 @@ class GameScreen(Screen):
         self.board.reset()
         self.last_move = time.monotonic()
         self.score_label.text = "[b]SCORE 0000[/b]"
+        self.backdrop.start_animation()
+        self.overlay_left.start_animation()
+        self.overlay_right.start_animation()
+        if self._hud_anim is None:
+            self._hud_anim = Clock.schedule_interval(self._tick_hud, 1 / 16)
         if self._tick_event is None:
             self._tick_event = Clock.schedule_interval(self._tick, 1 / 30)
 
@@ -218,6 +219,12 @@ class GameScreen(Screen):
         if self._tick_event is not None:
             self._tick_event.cancel()
             self._tick_event = None
+        if self._hud_anim is not None:
+            self._hud_anim.cancel()
+            self._hud_anim = None
+        self.backdrop.stop_animation()
+        self.overlay_left.stop_animation()
+        self.overlay_right.stop_animation()
 
     def set_scores_path(self, path):
         self._scores_path = path
