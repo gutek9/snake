@@ -4,7 +4,7 @@ import json
 import os
 
 DEFAULT_PATH = os.path.join(
-    os.path.expanduser("~"), ".terminal_snake_scores.json"
+    os.path.expanduser("~"), ".snake_scores.json"
 )
 MAX_SCORES = 10
 NAME_LEN = 3
@@ -57,5 +57,5 @@ def reset_scores(path=DEFAULT_PATH):
 
 
 def default_scores_path():
-    """Return the default score file path for terminal installs."""
+    """Return the default score file path."""
     return DEFAULT_PATH

@@ -4,10 +4,18 @@ import random
 from collections import deque
 
 
-def make_initial_snake(height, width):
-    """Create the starting snake centered in the terminal."""
-    start_y = height // 2
-    start_x = width // 2
+def make_initial_snake(height, width, bounds=None):
+    """Create the starting snake centered in the playable bounds."""
+    if bounds is None:
+        min_y, max_y, min_x, max_x = 1, height - 2, 1, width - 2
+    else:
+        min_y, max_y, min_x, max_x = bounds
+    start_y = (min_y + max_y) // 2
+    start_x = (min_x + max_x) // 2
+    if max_x - min_x >= 2:
+        start_x = max(min_x + 2, min(start_x, max_x))
+    else:
+        start_x = max_x
     snake = deque(
         [
             (start_y, start_x),
