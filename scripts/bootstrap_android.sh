@@ -56,4 +56,5 @@ fi
 
 echo "==> Bootstrap complete."
 echo "Next:"
-echo "  buildozer android debug"
+echo "  rm -rf .buildozer"
+echo "  \"$PYTHON_BIN\" -m buildozer android debug"

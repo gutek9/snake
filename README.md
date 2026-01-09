@@ -24,6 +24,13 @@ The Buildozer config lives at `buildozer.spec`.
 If you see `pyjnius` errors about `long`, ensure `buildozer.spec` points to
 Python 3.10 via `p4a.python_path`.
 
+If Buildozer still uses Python 3.12, run it via the pyenv interpreter:
+
+```bash
+rm -rf .buildozer
+PYTHON="$(pyenv which python)" "$PYTHON" -m buildozer android debug
+```
+
 ## Run locally (desktop)
 
 ```bash
