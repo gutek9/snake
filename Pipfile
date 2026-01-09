@@ -6,5 +6,8 @@ verify_ssl = true
 [packages]
 kivy = {version = ">=2.2.0", markers = "platform_system == 'Android'"}
 
+[dev-packages]
+pytest = "*"
+
 [requires]
 python_version = "3.8"

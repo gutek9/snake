@@ -26,6 +26,12 @@ The Buildozer config lives at `buildozer.spec`.
 python3 src/main.py
 ```
 
+## Tests
+
+```bash
+pytest
+```
+
 ## Architecture
 
 See `docs/architecture.md`.
