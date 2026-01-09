@@ -4,7 +4,8 @@ Android-only Snake built with Kivy.
 
 ## Quick Start
 
-Run the bootstrap script once from a fresh clone:
+Run the bootstrap script once from a fresh clone (it pins `cython<3` and prefers
+Python 3.10 when available to avoid `pyjnius` build errors):
 
 ```bash
 chmod +x scripts/bootstrap_android.sh
@@ -19,6 +20,9 @@ buildozer android deploy run
 ```
 
 The Buildozer config lives at `buildozer.spec`.
+
+If you see `pyjnius` errors about `long`, ensure `buildozer.spec` points to
+Python 3.10 via `p4a.python_path`.
 
 ## Run locally (desktop)
 
