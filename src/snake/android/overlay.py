@@ -59,6 +59,15 @@ class CyberOverlay(FloatLayout):
     def bind_stats(self, fn):
         self._stats_provider = fn
 
+    def start_animation(self):
+        if self._anim is None:
+            self._anim = Clock.schedule_interval(self._tick, 1 / 10)
+
+    def stop_animation(self):
+        if self._anim is not None:
+            self._anim.cancel()
+            self._anim = None
+
     def _tick(self, _dt):
         if self._matrix is not None:
             chars = "0123456789ABCDEF"
