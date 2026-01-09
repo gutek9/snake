@@ -2,14 +2,14 @@
 
 ```mermaid
 flowchart TD
-    AndroidEntry[Android Entry Point<br/>src/main.py] --> App[SnakeApp (Kivy)]
-    App --> Screens[android.app<br/>Menu/Game/Scores]
+    AndroidEntry["Android Entry Point<br/>src/main.py"] --> App["SnakeApp Kivy"]
+    App --> Screens["android.app<br/>Menu/Game/Scores"]
 
-    Screens --> AndroidGame[GameScreen tick<br/>core.new_game + step]
-    Screens --> AndroidScores[scores_store]
-    AndroidGame --> State[core.GameState]
-    State --> Food[state.place_food]
-    State --> Collision[Collision Rules<br/>Walls + Self]
+    Screens --> AndroidGame["GameScreen tick<br/>core.new_game then step"]
+    Screens --> AndroidScores["scores_store"]
+    AndroidGame --> State["core.GameState"]
+    State --> Food["state.place_food"]
+    State --> Collision["Collision Rules<br/>Walls and Self"]
 ```
 
 ## Notes
