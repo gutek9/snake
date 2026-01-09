@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "terminal-snake"
+name = "codex-snake-android"
 version = "0.1.0"
-description = "Play Snake in the terminal."
+description = "Android-only Snake built with Kivy."
 readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }
@@ -14,14 +14,9 @@ authors = [{ name = "Your Name" }]
 [project.optional-dependencies]
 android = ["kivy>=2.2.0"]
 
-[project.scripts]
-terminal-snake = "snake.terminal.game:run"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]

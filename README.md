@@ -1,15 +1,10 @@
-# Terminal Snake
+# Codex Snake (Android)
 
-Play Snake in your terminal using Python and curses.
+Android-only Snake built with Kivy.
 
 ## Run
 
-- `python -m snake`
-- Or install locally and run `terminal-snake`
-
-## Tests
-
-- `pytest`
+- Build and deploy using `buildozer android debug`
 
 ## Android (Kivy)
 

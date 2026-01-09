@@ -1,6 +1,8 @@
 """Kivy front end for Android-compatible Snake."""
 
+import math
 import os
+import random
 import time
 
 from kivy.app import App
@@ -11,6 +13,7 @@ from kivy.properties import ObjectProperty
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.screenmanager import Screen, ScreenManager
@@ -38,28 +41,6 @@ _NEON = {
     "green": (0.35, 1.0, 0.6, 1.0),
     "white": (0.98, 0.99, 1.0, 1.0),
 }
-
-
-def _menu_sequence():
-    """Return a Blade Runner-style loop (freqs, duration_ms, volume)."""
-    return [
-        ([110, 165, 220], 420, 0.2),
-        ([98, 147, 196], 360, 0.18),
-        ([110, 165, 220], 420, 0.2),
-        ([123, 184, 246], 380, 0.2),
-        ([92, 138, 184], 480, 0.18),
-        ([110, 165, 220], 420, 0.2),
-    ]
-
-
-def _game_sequence():
-    """Return a slower, low-register loop for gameplay background."""
-    return [
-        ([82, 123, 165], 420, 0.15),
-        ([98, 147, 196], 380, 0.15),
-        ([73, 110, 147], 460, 0.14),
-        ([98, 147, 196], 380, 0.15),
-    ]
 
 
 def _is_high_score(score, scores_path):
@@ -127,6 +108,134 @@ class NeonPanel(BoxLayout):
                 self.height - 2,
                 16,
             ), width=1.0)
+
+
+class SpaceBackdrop(Widget):
+    """Draw a subtle outer-space backdrop behind the HUD."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._stars = []
+        self._anim = None
+        self.bind(pos=self._redraw, size=self._redraw)
+        self._start_animation()
+
+    def _start_animation(self):
+        if self._anim is None:
+            self._anim = Clock.schedule_interval(self._tick, 1 / 24)
+
+    def _init_stars(self):
+        self._stars = []
+        for i in range(40):
+            self._stars.append(
+                {
+                    "x": (i * 37) % max(1, int(self.width)),
+                    "y": (i * 53) % max(1, int(self.height)),
+                    "speed": 6 + (i % 5),
+                }
+            )
+
+    def _tick(self, _dt):
+        if not self._stars:
+            self._init_stars()
+        for star in self._stars:
+            star["y"] -= star["speed"] / 4.0
+            if star["y"] < self.y + 4:
+                star["y"] = self.top - 4
+        self._redraw()
+
+    def _redraw(self, *_args):
+        self.canvas.clear()
+        with self.canvas:
+            Color(0.01, 0.02, 0.04, 1.0)
+            Rectangle(pos=self.pos, size=self.size)
+            Color(0.8, 0.9, 1.0, 0.3)
+            for star in self._stars:
+                Line(points=[star["x"], star["y"], star["x"], star["y"]], width=1)
+            Color(0.1, 0.4, 0.7, 0.08)
+            for i in range(6):
+                y = self.y + 10 + i * 24
+                Line(points=[self.x + 6, y, self.right - 6, y], width=1)
+            Color(0.05, 0.2, 0.35, 0.25)
+            Line(
+                rectangle=(self.x + 6, self.y + 6, self.width - 12, self.height - 12),
+                width=1,
+            )
+            for i in range(6):
+                offset = 18 + i * 26
+                Line(
+                    points=[
+                        self.x + offset,
+                        self.y + 4,
+                        self.x + offset + 12,
+                        self.y + 4,
+                    ],
+                    width=1,
+                )
+
+
+class CyberOverlay(FloatLayout):
+    """Cyberpunk side readouts to fill space outside the board."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._matrix = Label(
+            text="",
+            color=(0.2, 1.0, 0.6, 0.8),
+            font_size=18,
+            halign="left",
+            valign="top",
+        )
+        self._matrix.bind(size=self._matrix.setter("text_size"))
+        self._matrix.pos_hint = {"center_x": 0.15, "center_y": 0.55}
+        self._matrix.size_hint = (0.3, 0.45)
+        self.add_widget(self._matrix)
+
+        self._readout = Label(
+            text="SYS 88\nSPD 01\nLEN 03\nPWR 77\nSCR 0000\nDIR R",
+            color=_NEON["cyan"],
+            font_size=20,
+            halign="right",
+            valign="top",
+        )
+        self._readout.bind(size=self._readout.setter("text_size"))
+        self._readout.pos_hint = {"center_x": 0.15, "center_y": 0.82}
+        self._readout.size_hint = (0.3, 0.4)
+        self.add_widget(self._readout)
+
+        self._scan = Label(
+            text="SYNC: OK",
+            color=_NEON["magenta"],
+            font_size=16,
+            halign="center",
+        )
+        self._scan.pos_hint = {"center_x": 0.15, "center_y": 0.2}
+        self._scan.size_hint = (0.3, 0.08)
+        self.add_widget(self._scan)
+
+        self._anim = Clock.schedule_interval(self._tick, 1 / 10)
+        self._stats_provider = None
+
+    def bind_stats(self, fn):
+        self._stats_provider = fn
+
+    def _tick(self, _dt):
+        chars = "0123456789ABCDEF"
+        lines = []
+        for _ in range(6):
+            line = "".join(random.choice(chars) for _ in range(14))
+            lines.append(line)
+        self._matrix.text = "\n".join(lines)
+        if self._stats_provider is not None:
+            stats = self._stats_provider()
+            self._readout.text = (
+                f"SYS {stats['sys']:02d}\n"
+                f"SPD {stats['spd']:02d}\n"
+                f"LEN {stats['len']:02d}\n"
+                f"PWR {stats['pwr']:02d}\n"
+                f"SCR {stats['scr']:04d}\n"
+                f"DIR {stats['dir']}"
+            )
 
 
 class SnakeBoard(Widget):
@@ -236,6 +345,9 @@ class MenuScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._audio = None
+        self._title = None
+        self._flash_phase = 0.0
+        self._menu_anim = None
         layout = NeonPanel(orientation="vertical", padding=28, spacing=18)
         title = Label(
             text="[b]CODEX SNAKE[/b]",
@@ -244,6 +356,7 @@ class MenuScreen(Screen):
             color=_NEON["magenta"],
             markup=True,
         )
+        self._title = title
         subtitle = Label(
             text="ARCADE SYSTEM READY",
             font_size=16,
@@ -273,12 +386,34 @@ class MenuScreen(Screen):
         self._audio = audio
 
     def on_pre_enter(self, *args):
-        if self._audio is not None:
-            self._audio.play_sequence("menu_theme", _menu_sequence(), loop=True)
+        if self._menu_anim is None:
+            self._menu_anim = Clock.schedule_interval(self._tick_menu, 1 / 20)
 
     def on_leave(self, *args):
-        if self._audio is not None:
-            self._audio.stop_sequence("menu_theme")
+        if self._menu_anim is not None:
+            self._menu_anim.cancel()
+            self._menu_anim = None
+
+    def _tick_menu(self, dt):
+        self._flash_phase += dt * 1.8
+        if random.random() < 0.08:
+            glow = 0.25
+        else:
+            glow = 0.65 + (math.sin(self._flash_phase) * 0.25)
+        self._title.color = (
+            _NEON["magenta"][0],
+            _NEON["magenta"][1],
+            _NEON["magenta"][2],
+            max(0.3, min(1.0, glow)),
+        )
+        pulse = 0.75 + (math.sin(self._flash_phase * 1.3) * 0.2)
+        for btn in self._pulse_buttons:
+            btn.color = (
+                _NEON["white"][0],
+                _NEON["white"][1],
+                _NEON["white"][2],
+                max(0.5, min(1.0, pulse)),
+            )
 
 
 class GameScreen(Screen):
@@ -290,14 +425,27 @@ class GameScreen(Screen):
         self._scores_path = None
         self._audio = None
 
+        self.backdrop = SpaceBackdrop(size_hint=(1, 1))
+        self.add_widget(self.backdrop)
+
+        self.overlay = CyberOverlay(size_hint=(1, 1))
+        self.overlay.bind_stats(self._hud_stats)
+        self.add_widget(self.overlay)
+
         root = BoxLayout(orientation="vertical", spacing=8, padding=10)
+        hud = NeonPanel(size_hint=(1, 0.12), padding=10)
+        self._hud_pulse = 0.0
+        self._hud_dir = 1
+        self._hud_anim = Clock.schedule_interval(self._tick_hud, 1 / 16)
         self.score_label = Label(
-            text="Score: 0",
-            size_hint=(1, 0.1),
-            color=_NEON["white"],
-            font_size=26,
+            text="[b]SCORE 0000[/b]",
+            size_hint=(1, 1),
+            color=_NEON["magenta"],
+            font_size=34,
+            markup=True,
         )
-        root.add_widget(self.score_label)
+        hud.add_widget(self.score_label)
+        root.add_widget(hud)
 
         self.board = SnakeBoard()
         root.add_widget(self.board)
@@ -329,18 +477,30 @@ class GameScreen(Screen):
         root.add_widget(controls)
         self.add_widget(root)
 
+    def _tick_hud(self, dt):
+        self._hud_pulse += dt * self._hud_dir
+        if self._hud_pulse >= 1.0:
+            self._hud_pulse = 1.0
+            self._hud_dir = -1
+        elif self._hud_pulse <= 0.0:
+            self._hud_pulse = 0.0
+            self._hud_dir = 1
+        glow = 0.5 + self._hud_pulse * 0.4
+        self.score_label.color = (
+            _NEON["magenta"][0],
+            _NEON["magenta"][1],
+            _NEON["magenta"][2],
+            glow,
+        )
+
     def on_pre_enter(self, *args):
         self.board.reset()
         self.last_move = time.monotonic()
-        self.score_label.text = "Score: 0"
-        if self._audio is not None:
-            self._audio.play_sequence("game_theme", _game_sequence(), loop=True)
+        self.score_label.text = "[b]SCORE 0000[/b]"
         if self._tick_event is None:
             self._tick_event = Clock.schedule_interval(self._tick, 1 / 30)
 
     def on_leave(self, *args):
-        if self._audio is not None:
-            self._audio.stop_sequence("game_theme")
         if self._tick_event is not None:
             self._tick_event.cancel()
             self._tick_event = None
@@ -354,7 +514,7 @@ class GameScreen(Screen):
     def _set_dir(self, key):
         changed = self.board.state.set_direction(_DIRECTIONS[key])
         if changed and self._audio is not None:
-            self._audio.play("turn", 520, 50, volume=0.5)
+            self._audio.play_chord("turn", [520, 660], 60, volume=0.5)
 
     def _tick(self, _dt):
         now = time.monotonic()
@@ -364,39 +524,41 @@ class GameScreen(Screen):
         self.last_move = now
 
         status = self.board.state.step()
-        self.score_label.text = f"Score: {self.board.state.score}"
+        self.score_label.text = f"[b]SCORE {self.board.state.score:04d}[/b]"
         self.board._redraw()
 
         if status == "ate" and self._audio is not None:
-            self._audio.play("eat", 880, 70, volume=0.7)
+            self._audio.play_chord("eat", [740, 880, 990], 80, volume=0.6)
 
         if status in ("game_over", "win"):
-            if self._audio is not None:
-                if status == "win":
-                    self._audio.play("win", 660, 180, volume=0.8)
-                    self._audio.play_chord(
-                        "win_chord", [660, 825, 990], 160, volume=0.6
-                    )
-                else:
-                    self._audio.play("game_over", 220, 180, volume=0.8)
-                if _is_high_score(self.board.state.score, self._scores_path):
-                    self._audio.play_sequence(
-                        "high_score",
-                        [
-                            ([880, 1100], 80, 0.7),
-                            ([990, 1320], 80, 0.7),
-                            ([1175, 1568], 120, 0.7),
-                        ],
-                    )
+            if self._audio is not None and _is_high_score(
+                self.board.state.score, self._scores_path
+            ):
+                self._audio.play_chord("high_score", [880, 1100, 1320], 140, volume=0.7)
             self._show_game_over(status)
+
+    def _hud_stats(self):
+        speed = compute_speed(len(self.board.state.snake), self.base_speed)
+        speed_pct = max(0, min(99, int((1.0 - speed / 0.2) * 99)))
+        length = min(99, len(self.board.state.snake))
+        power = max(10, min(99, 30 + length))
+        sys = (power + speed_pct) % 99
+        dir_map = {(0, 1): "R", (0, -1): "L", (1, 0): "D", (-1, 0): "U"}
+        direction = dir_map.get(self.board.state.direction, "?")
+        return {
+            "sys": sys,
+            "spd": speed_pct,
+            "len": length,
+            "pwr": power,
+            "scr": self.board.state.score,
+            "dir": direction,
+        }
 
     def _show_game_over(self, status):
         title = "You Win!" if status == "win" else "Game Over"
         if self._tick_event is not None:
             self._tick_event.cancel()
             self._tick_event = None
-        if self._audio is not None:
-            self._audio.stop_sequence("game_theme")
         prompt = NeonPanel(orientation="vertical", spacing=8, padding=12)
         prompt.add_widget(Label(text=title, color=_NEON["white"], font_size=24))
         prompt.add_widget(Label(text="Enter your initials", color=_NEON["white"]))

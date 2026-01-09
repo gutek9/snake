@@ -1,4 +1,4 @@
-"""Core game rules shared across terminal and Android front ends."""
+"""Core game rules for the Android front end."""
 
 from dataclasses import dataclass
 
@@ -72,7 +72,7 @@ def new_game(height, width, bounds=None):
     if bounds is None:
         bounds = (1, height - 2, 1, width - 2)
     min_y, max_y, min_x, max_x = bounds
-    snake, snake_set = make_initial_snake(height, width)
+    snake, snake_set = make_initial_snake(height, width, bounds=bounds)
     food = place_food(
         height, width, snake, min_y=min_y, max_y=max_y, min_x=min_x, max_x=max_x
     )

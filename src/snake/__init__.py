@@ -1,1 +1,1 @@
-"""Terminal Snake game package."""
+"""Android-only Snake game package."""
